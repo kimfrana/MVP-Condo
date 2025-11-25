@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id        String   @id @default(uuid())
+  nome      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  arquivos  ArquivoAudio[]
+
+  @@map("usuarios")
+}
+
+model ArquivoAudio {
+  id                   String   @id @default(uuid())
+  nomeOriginal         String
+  nomeArmazenado       String
+  caminhoArquivo       String
+  tamanhoBytes         Int
+  formato              String
+  statusProcessamento  String   @default("PENDENTE") // PENDENTE | PROCESSANDO | CONCLUIDO | ERRO
+  idReuniaoOuTeste     String?  // ID vinculado à reunião ou teste
+  
+  // Relação com usuário
+  usuarioId            String
+  usuario              Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  // Dados da transcrição (quando processado)
+  transcricao          String?
+  processadoEm         DateTime?
+  erroProcessamento    String?
+
+  // Dados da ata gerada
+  ataGerada            Boolean   @default(false)
+  textoAta             String?
+  statusAta            String?   // GERANDO | CONCLUIDA | ERRO
+  ataGeradaEm          DateTime?
+  erroAta              String?
+
+  @@map("arquivos_audio")
+}

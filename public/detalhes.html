@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGC-MVP - Detalhes da Transcrição</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #1E1E1E;
+            --bg-secondary: #2D2D2D;
+            --bg-card: #252525;
+            --text-primary: #E0E0E0;
+            --text-secondary: #A0A0A0;
+            --border-color: #3A3A3A;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        body.light-mode {
+            --bg-primary: #F7F7F7;
+            --bg-secondary: #FFFFFF;
+            --bg-card: #FFFFFF;
+            --text-primary: #1E1E1E;
+            --text-secondary: #6C757D;
+            --border-color: #E0E0E0;
+            --shadow: rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .back-button:hover {
+            border-color: #007BFF;
+            color: #007BFF;
+        }
+
+        .theme-toggle {
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            transform: translateY(-1px);
+            border-color: #007BFF;
+        }
+
+        .details-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 2px 12px var(--shadow);
+            margin-bottom: 20px;
+            transition: background 0.3s ease;
+        }
+
+        .details-card h1 {
+            color: var(--text-primary);
+            margin-bottom: 10px;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .details-card .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info-item {
+            padding: 15px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            transition: background 0.3s ease;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 16px;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .status-pendente {
+            background: #FFF3CD;
+            color: #997404;
+        }
+
+        .status-processando {
+            background: #CCE5FF;
+            color: #004085;
+        }
+
+        .status-concluido {
+            background: #D1F2EB;
+            color: #0C5540;
+        }
+
+        .status-erro {
+            background: #F8D7DA;
+            color: #721C24;
+        }
+
+        .transcription-section {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 2px 12px var(--shadow);
+            transition: background 0.3s ease;
+        }
+
+        .transcription-section h2 {
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .transcription-text {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 12px;
+            line-height: 1.8;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+            transition: background 0.3s ease;
+        }
+
+        .no-transcription {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .error-message {
+            background: #F8D7DA;
+            color: #721C24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        body.light-mode .error-message {
+            background: #F8D7DA;
+            color: #721C24;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007BFF;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #007BFF;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056B3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
+
+        .btn-secondary {
+            background: #20C997;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #17A87E;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-top">
+            <a href="/" class="back-button">
+                ← Voltar para Listagem
+            </a>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">
+                <span id="themeIcon">☀️</span>
+            </button>
+        </div>
+
+        <div id="loadingState" class="details-card">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Carregando detalhes...</p>
+            </div>
+        </div>
+
+        <div id="detailsContent" style="display: none;">
+            <div class="details-card">
+                <h1 id="fileName">Nome do Arquivo</h1>
+                <p class="subtitle" id="fileDate">Data de upload</p>
+
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Reunião</div>
+                        <div class="info-value" id="reuniao">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Tamanho</div>
+                        <div class="info-value" id="fileSize">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Formato</div>
+                        <div class="info-value" id="formato">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Status</div>
+                        <div class="info-value" id="statusContainer"></div>
+                    </div>
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Enviado por</div>
+                        <div class="info-value" id="usuario">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Processado em</div>
+                        <div class="info-value" id="processadoEm">-</div>
+                    </div>
+                </div>
+
+                <div id="errorContainer" style="display: none;"></div>
+            </div>
+
+            <div class="transcription-section">
+                <h2>📝 Transcrição</h2>
+                
+                <div id="transcriptionLoading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Processando transcrição...</p>
+                </div>
+
+                <div id="transcriptionContent" class="transcription-text">
+                    <!-- Conteúdo da transcrição -->
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="copyTranscription()">
+                        📋 Copiar Transcrição
+                    </button>
+                    <button class="btn btn-secondary" onclick="downloadTranscription('txt')">
+                        💾 Baixar como TXT
+                    </button>
+                    <button class="btn btn-secondary" onclick="downloadTranscription('json')">
+                        💾 Baixar como JSON
+                    </button>
+                    <button class="btn btn-primary" id="gerarAtaBtn" onclick="gerarAta()" style="background: #28A745; display: none;">
+                        📄 Gerar Ata
+                    </button>
+                </div>
+            </div>
+
+            <!-- Seção da Ata -->
+            <div class="transcription-section" id="ataSection" style="display: none;">
+                <h2>📄 Ata da Reunião</h2>
+                
+                <div id="ataLoading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Gerando ata...</p>
+                </div>
+
+                <div id="ataContent" class="transcription-text">
+                    <!-- Conteúdo da ata -->
+                </div>
+
+                <div class="action-buttons" id="ataButtons" style="display: none;">
+                    <button class="btn btn-primary" onclick="copyAta()">
+                        📋 Copiar Ata
+                    </button>
+                    <button class="btn btn-secondary" onclick="downloadAta('txt')">
+                        💾 Baixar como TXT
+                    </button>
+                    <button class="btn btn-secondary" onclick="downloadAta('json')">
+                        💾 Baixar como JSON
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTranscription = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Carregar tema primeiro
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+                document.getElementById('themeIcon').textContent = '🌙';
+            } else {
+                // Modo escuro é o padrão (sem classe adicional)
+                document.getElementById('themeIcon').textContent = '☀️';
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+            
+            if (!id) {
+                alert('ID não fornecido');
+                window.location.href = '/';
+                return;
+            }
+
+            loadDetails(id);
+            
+            // Atualizar a cada 3 segundos se estiver processando
+            const interval = setInterval(async () => {
+                const response = await fetch(`/api/audio/${id}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const status = result.data.statusProcessamento;
+                    
+                    if (status === 'CONCLUIDO' || status === 'ERRO') {
+                        clearInterval(interval);
+                        loadDetails(id);
+                    } else if (status === 'PROCESSANDO') {
+                        document.getElementById('transcriptionLoading').style.display = 'block';
+                    }
+                }
+            }, 3000);
+        });
+
+        async function loadDetails(id) {
+            try {
+                const response = await fetch(`/api/audio/${id}`);
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'Erro ao carregar detalhes');
+                }
+
+                const data = result.data;
+                currentTranscription = data;
+
+                // Preencher informações
+                document.getElementById('fileName').textContent = data.nomeOriginal;
+                document.getElementById('fileDate').textContent = formatDate(data.createdAt);
+                document.getElementById('reuniao').textContent = data.idReuniaoOuTeste || 'Não vinculada';
+                document.getElementById('fileSize').textContent = formatFileSize(data.tamanhoBytes);
+                document.getElementById('formato').textContent = data.formato.toUpperCase();
+                document.getElementById('usuario').textContent = data.usuario.nome;
+                document.getElementById('processadoEm').textContent = data.processadoEm 
+                    ? formatDate(data.processadoEm) 
+                    : 'Aguardando processamento';
+
+                // Status
+                const statusContainer = document.getElementById('statusContainer');
+                statusContainer.innerHTML = `
+                    <span class="status-badge status-${data.statusProcessamento.toLowerCase()}">
+                        ${getStatusText(data.statusProcessamento)}
+                    </span>
+                `;
+
+                // Transcrição
+                const transcriptionContent = document.getElementById('transcriptionContent');
+                const transcriptionLoading = document.getElementById('transcriptionLoading');
+                const gerarAtaBtn = document.getElementById('gerarAtaBtn');
+
+                if (data.statusProcessamento === 'CONCLUIDO' && data.transcricao) {
+                    transcriptionContent.textContent = data.transcricao;
+                    transcriptionLoading.style.display = 'none';
+                    
+                    // Mostrar botão de gerar ata se ainda não foi gerada
+                    if (!data.ataGerada || data.statusAta !== 'CONCLUIDA') {
+                        gerarAtaBtn.style.display = 'inline-block';
+                    }
+                } else if (data.statusProcessamento === 'PROCESSANDO') {
+                    transcriptionContent.innerHTML = '<div class="no-transcription">⏳ Transcrição em processamento...</div>';
+                    transcriptionLoading.style.display = 'block';
+                } else if (data.statusProcessamento === 'ERRO') {
+                    transcriptionContent.innerHTML = '<div class="no-transcription">❌ Erro ao processar transcrição</div>';
+                    transcriptionLoading.style.display = 'none';
+                    
+                    if (data.erroProcessamento) {
+                        const errorContainer = document.getElementById('errorContainer');
+                        errorContainer.innerHTML = `<div class="error-message">❌ ${data.erroProcessamento}</div>`;
+                        errorContainer.style.display = 'block';
+                    }
+                } else {
+                    transcriptionContent.innerHTML = '<div class="no-transcription">⏳ Aguardando processamento...</div>';
+                    transcriptionLoading.style.display = 'none';
+                }
+
+                // Verificar se já tem ata gerada
+                if (data.ataGerada && data.statusAta === 'CONCLUIDA' && data.textoAta) {
+                    // Ata já existe - mostrar botão para visualizar
+                    gerarAtaBtn.textContent = '📄 Ver Ata Gerada';
+                    gerarAtaBtn.style.background = '#28A745';
+                    gerarAtaBtn.style.display = 'inline-block';
+                    gerarAtaBtn.onclick = () => window.location.href = `/ata.html?id=${data.id}`;
+                } else if (data.statusAta === 'GERANDO') {
+                    // Ata está sendo gerada, mostrar loading e polling
+                    const ataSection = document.getElementById('ataSection');
+                    const ataLoading = document.getElementById('ataLoading');
+                    
+                    ataSection.style.display = 'block';
+                    ataLoading.style.display = 'block';
+                    gerarAtaBtn.disabled = true;
+                    gerarAtaBtn.textContent = '⏳ Gerando...';
+                    checkAtaStatus(data.id);
+                } else if (data.statusAta === 'ERRO') {
+                    // Erro ao gerar ata - permitir tentar novamente
+                    gerarAtaBtn.style.display = 'inline-block';
+                }
+
+                // Mostrar conteúdo
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('detailsContent').style.display = 'block';
+
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('loadingState').innerHTML = `
+                    <div class="loading">
+                        <p style="color: #e74c3c;">❌ Erro ao carregar detalhes: ${error.message}</p>
+                        <a href="/" class="back-button" style="margin-top: 20px;">Voltar para Listagem</a>
+                    </div>
+                `;
+            }
+        }
+
+        function copyTranscription() {
+            const text = document.getElementById('transcriptionContent').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ Transcrição copiada para a área de transferência!');
+            }).catch(err => {
+                alert('❌ Erro ao copiar: ' + err);
+            });
+        }
+
+        function downloadTranscription(format = 'txt') {
+            if (!currentTranscription || !currentTranscription.transcricao) {
+                alert('Nenhuma transcrição disponível para download');
+                return;
+            }
+
+            const fileName = currentTranscription.idReuniaoOuTeste || currentTranscription.nomeOriginal.split('.')[0];
+            let content, mimeType, extension;
+
+            if (format === 'json') {
+                // Download como JSON com metadados completos
+                const jsonData = {
+                    id: currentTranscription.id,
+                    reuniao: currentTranscription.idReuniaoOuTeste,
+                    nomeArquivo: currentTranscription.nomeOriginal,
+                    formato: currentTranscription.formato,
+                    tamanhoBytes: currentTranscription.tamanhoBytes,
+                    statusProcessamento: currentTranscription.statusProcessamento,
+                    transcricao: currentTranscription.transcricao,
+                    dataUpload: currentTranscription.createdAt,
+                    dataProcessamento: currentTranscription.processadoEm,
+                    usuario: {
+                        nome: currentTranscription.usuario.nome,
+                        email: currentTranscription.usuario.email
+                    }
+                };
+                content = JSON.stringify(jsonData, null, 2);
+                mimeType = 'application/json';
+                extension = 'json';
+            } else {
+                // Download como TXT apenas com o texto
+                content = currentTranscription.transcricao;
+                mimeType = 'text/plain';
+                extension = 'txt';
+            }
+
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `transcricao_${fileName}.${extension}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'PENDENTE': 'Pendente',
+                'PROCESSANDO': 'Processando',
+                'CONCLUIDO': 'Concluído',
+                'ERRO': 'Erro'
+            };
+            return statusMap[status] || status;
+        }
+
+        // ====== FUNÇÕES DA ATA ======
+
+        async function gerarAta() {
+            if (!currentTranscription) {
+                alert('Nenhuma transcrição disponível');
+                return;
+            }
+
+            const gerarAtaBtn = document.getElementById('gerarAtaBtn');
+            const ataSection = document.getElementById('ataSection');
+            const ataLoading = document.getElementById('ataLoading');
+
+            try {
+                // Desabilitar botão e mostrar loading
+                gerarAtaBtn.disabled = true;
+                gerarAtaBtn.textContent = '⏳ Gerando...';
+                
+                ataSection.style.display = 'block';
+                ataLoading.style.display = 'block';
+
+                // Chamar API para gerar ata
+                const response = await fetch(`/api/audio/${currentTranscription.id}/gerar-ata`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'Erro ao gerar ata');
+                }
+
+                // Iniciar polling para verificar status
+                checkAtaStatus(currentTranscription.id);
+
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao gerar ata: ' + error.message);
+                
+                gerarAtaBtn.disabled = false;
+                gerarAtaBtn.textContent = '📄 Gerar Ata';
+                ataLoading.style.display = 'none';
+            }
+        }
+
+        async function checkAtaStatus(audioId) {
+            const ataLoading = document.getElementById('ataLoading');
+            const gerarAtaBtn = document.getElementById('gerarAtaBtn');
+
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/audio/${audioId}`);
+                    const result = await response.json();
+
+                    if (result.success && result.data) {
+                        const data = result.data;
+                        
+                        if (data.statusAta === 'CONCLUIDA' && data.textoAta) {
+                            // Ata concluída - redirecionar para página da ata
+                            clearInterval(interval);
+                            console.log('✅ Ata gerada com sucesso - redirecionando...');
+                            window.location.href = `/ata.html?id=${audioId}`;
+                            
+                        } else if (data.statusAta === 'ERRO') {
+                            // Erro na geração
+                            clearInterval(interval);
+                            ataLoading.style.display = 'none';
+                            alert(`❌ Erro ao gerar ata${data.erroAta ? ': ' + data.erroAta : ''}`);
+                            
+                            gerarAtaBtn.disabled = false;
+                            gerarAtaBtn.textContent = '📄 Gerar Ata';
+                            gerarAtaBtn.style.display = 'block';
+                            
+                            // Esconder seção da ata
+                            document.getElementById('ataSection').style.display = 'none';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Erro ao verificar status da ata:', error);
+                }
+            }, 2000); // Verifica a cada 2 segundos
+        }
+
+        function copyAta() {
+            const text = document.getElementById('ataContent').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ Ata copiada para a área de transferência!');
+            }).catch(err => {
+                alert('❌ Erro ao copiar: ' + err);
+            });
+        }
+
+        function downloadAta(format = 'txt') {
+            if (!currentTranscription || !currentTranscription.textoAta) {
+                alert('Nenhuma ata disponível para download');
+                return;
+            }
+
+            const fileName = currentTranscription.idReuniaoOuTeste || currentTranscription.nomeOriginal.split('.')[0];
+            let content, mimeType, extension;
+
+            if (format === 'json') {
+                // Download como JSON com metadados completos
+                const jsonData = {
+                    id: currentTranscription.id,
+                    reuniao: currentTranscription.idReuniaoOuTeste,
+                    nomeArquivo: currentTranscription.nomeOriginal,
+                    ata: currentTranscription.textoAta,
+                    dataGeracao: currentTranscription.ataGeradaEm,
+                    transcricaoOriginal: currentTranscription.transcricao,
+                    usuario: {
+                        nome: currentTranscription.usuario.nome,
+                        email: currentTranscription.usuario.email
+                    }
+                };
+                content = JSON.stringify(jsonData, null, 2);
+                mimeType = 'application/json';
+                extension = 'json';
+            } else {
+                // Download como TXT apenas com o texto da ata
+                content = currentTranscription.textoAta;
+                mimeType = 'text/plain';
+                extension = 'txt';
+            }
+
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ata_${fileName}.${extension}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            const isLight = document.body.classList.contains('light-mode');
+            const themeIcon = document.getElementById('themeIcon');
+            
+            if (isLight) {
+                themeIcon.textContent = '🌙';
+                localStorage.setItem('theme', 'light');
+            } else {
+                themeIcon.textContent = '☀️';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+    </script>
+</body>
+</html>
