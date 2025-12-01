@@ -248,6 +248,9 @@ router.get('/:id', async (req: Request, res: Response) => {
             nome: true,
             email: true
           }
+        },
+        assinaturas: {
+          orderBy: { assinadoEm: 'asc' }
         }
       }
     });
@@ -270,6 +273,165 @@ router.get('/:id', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Erro ao buscar arquivo'
+    });
+  }
+});
+
+/**
+ * DELETE /api/audio/:id
+ * Deleta o arquivo de áudio, transcrição e ata
+ */
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Buscar arquivo para pegar o caminho
+    const arquivo = await prisma.arquivoAudio.findUnique({
+      where: { id }
+    });
+
+    if (!arquivo) {
+      res.status(404).json({
+        success: false,
+        error: 'Arquivo não encontrado'
+      });
+      return;
+    }
+
+    // Deletar arquivo físico
+    try {
+      await fs.unlink(arquivo.caminhoArquivo);
+      console.log(`🗑️ Arquivo deletado: ${arquivo.caminhoArquivo}`);
+    } catch (error) {
+      console.error('Erro ao deletar arquivo físico:', error);
+      // Continua mesmo se o arquivo não existir
+    }
+
+    // Deletar registro do banco
+    await prisma.arquivoAudio.delete({
+      where: { id }
+    });
+
+    res.json({
+      success: true,
+      message: 'Arquivo, transcrição e ata deletados com sucesso'
+    });
+
+  } catch (error) {
+    console.error('Erro ao deletar arquivo:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao deletar arquivo'
+    });
+  }
+});
+
+/**
+ * POST /api/audio/:id/assinar
+ * Criar assinatura para uma ata
+ */
+router.post('/:id/assinar', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { nomeAssinante, cpfAssinante, emailAssinante, cargoAssinante } = req.body;
+
+    // Validar dados obrigatórios
+    if (!nomeAssinante) {
+      res.status(400).json({
+        success: false,
+        error: 'Nome do assinante é obrigatório'
+      });
+      return;
+    }
+
+    // Buscar arquivo e verificar se tem ata
+    const arquivo = await prisma.arquivoAudio.findUnique({
+      where: { id },
+      include: { assinaturas: true }
+    });
+
+    if (!arquivo) {
+      res.status(404).json({
+        success: false,
+        error: 'Arquivo não encontrado'
+      });
+      return;
+    }
+
+    if (!arquivo.ataGerada || !arquivo.textoAta) {
+      res.status(400).json({
+        success: false,
+        error: 'Esta transcrição ainda não possui uma ata gerada'
+      });
+      return;
+    }
+
+    // Criar hash do documento (simplificado para MVP)
+    const crypto = require('crypto');
+    const hashDocumento = crypto
+      .createHash('sha256')
+      .update(arquivo.textoAta)
+      .digest('hex');
+
+    // Capturar dados da requisição
+    const ipAssinante = req.ip || req.socket.remoteAddress;
+    const userAgentAssinante = req.headers['user-agent'];
+
+    // Criar assinatura
+    const assinatura = await prisma.assinatura.create({
+      data: {
+        arquivoAudioId: id,
+        nomeAssinante,
+        cpfAssinante: cpfAssinante || null,
+        emailAssinante: emailAssinante || null,
+        cargoAssinante: cargoAssinante || null,
+        tipoAssinatura: 'SIMPLES',
+        hashDocumento,
+        ipAssinante,
+        userAgentAssinante
+      }
+    });
+
+    console.log(`✍️ Ata assinada por ${nomeAssinante} (${cargoAssinante || 'sem cargo'})`);
+
+    res.json({
+      success: true,
+      message: 'Assinatura registrada com sucesso',
+      data: assinatura
+    });
+
+  } catch (error) {
+    console.error('Erro ao criar assinatura:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao registrar assinatura'
+    });
+  }
+});
+
+/**
+ * GET /api/audio/:id/assinaturas
+ * Listar assinaturas de uma ata
+ */
+router.get('/:id/assinaturas', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const assinaturas = await prisma.assinatura.findMany({
+      where: { arquivoAudioId: id },
+      orderBy: { assinadoEm: 'asc' }
+    });
+
+    res.json({
+      success: true,
+      data: assinaturas
+    });
+
+  } catch (error) {
+    console.error('Erro ao buscar assinaturas:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao buscar assinaturas'
     });
   }
 });

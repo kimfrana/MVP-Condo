@@ -25,6 +25,13 @@ export const audioService = {
   },
   
   generateAta: (id) => api.post(`/api/audio/${id}/gerar-ata`),
+  
+  delete: (id) => api.delete(`/api/audio/${id}`),
+
+  // Assinatura endpoints
+  assinar: (id, dados) => api.post(`/api/audio/${id}/assinar`, dados),
+  
+  getAssinaturas: (id) => api.get(`/api/audio/${id}/assinaturas`),
 };
 
 export default api;

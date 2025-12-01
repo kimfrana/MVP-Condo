@@ -132,6 +132,22 @@ function Listagem() {
     return statusMap[status] || status;
   };
 
+  const handleDelete = async (id, nomeOriginal) => {
+    if (!confirm(`Tem certeza que deseja deletar "${nomeOriginal}"?\n\nIsso irá remover a transcrição, a ata e o arquivo de áudio.`)) {
+      return;
+    }
+
+    try {
+      const response = await audioService.delete(id);
+      if (response.data.success) {
+        setMessage({ type: 'success', text: 'Arquivo deletado com sucesso!' });
+        loadTranscriptions();
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: error.response?.data?.error || 'Erro ao deletar arquivo' });
+    }
+  };
+
   return (
     <div className="container">
       <div className="header">
@@ -159,6 +175,24 @@ function Listagem() {
           <option value="ERRO">Erro</option>
         </select>
       </div>
+
+      {message && (
+        <div className={`alert alert-${message.type}`} style={{ marginBottom: '20px' }}>
+          {message.text}
+          <button 
+            onClick={() => setMessage(null)} 
+            style={{ 
+              float: 'right', 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer',
+              fontSize: '18px'
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className="table-container">
         {loading ? (
@@ -202,12 +236,21 @@ function Listagem() {
                     )}
                   </td>
                   <td>
-                    <button 
-                      className="btn-action btn-details"
-                      onClick={() => navigate(`/detalhes/${item.id}`)}
-                    >
-                      👁️ Detalhes
-                    </button>
+                    <div className="action-buttons">
+                      <button 
+                        className="btn-action btn-details"
+                        onClick={() => navigate(`/detalhes/${item.id}`)}
+                      >
+                        👁️ Detalhes
+                      </button>
+                      <button 
+                        className="btn-action btn-delete"
+                        onClick={() => handleDelete(item.id, item.nomeOriginal)}
+                        title="Deletar áudio, transcrição e ata"
+                      >
+                        🗑️ Deletar
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

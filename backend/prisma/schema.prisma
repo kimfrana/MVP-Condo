@@ -53,5 +53,38 @@ model ArquivoAudio {
   ataGeradaEm          DateTime?
   erroAta              String?
 
+  // Relacionamento com assinaturas
+  assinaturas          Assinatura[]
+
   @@map("arquivos_audio")
+}
+
+model Assinatura {
+  id                   String   @id @default(uuid())
+  
+  // Relacionamento com arquivo/ata
+  arquivoAudioId       String
+  arquivoAudio         ArquivoAudio @relation(fields: [arquivoAudioId], references: [id], onDelete: Cascade)
+  
+  // Dados do assinante
+  nomeAssinante        String
+  cpfAssinante         String?
+  emailAssinante       String?
+  cargoAssinante       String?  // Ex: Síndico, Subsíndico, Conselheiro
+  
+  // Dados da assinatura
+  tipoAssinatura       String   @default("SIMPLES") // SIMPLES | GOVBR | CERTIFICADO_DIGITAL
+  hashDocumento        String?  // Hash do documento no momento da assinatura
+  ipAssinante          String?
+  userAgentAssinante   String?
+  
+  // Integração gov.br (para futuro)
+  govbrCpf             String?
+  govbrNivelConta      String?  // bronze, prata, ouro
+  govbrCertificadoId   String?
+  
+  // Timestamps
+  assinadoEm           DateTime @default(now())
+  
+  @@map("assinaturas")
 }
