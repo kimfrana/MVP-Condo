@@ -1,10 +1,10 @@
-import { Router, Request, Response } from 'express';
-import { UploadedFile } from 'express-fileupload';
-import path from 'path';
-import fs from 'fs/promises';
-import prisma from '../lib/prisma';
-import { validateAudioFile } from '../middleware/validateAudioFile';
-import { uploadSchema } from '../config/upload.config';
+import { Router, Request, Response } from "express";
+import { UploadedFile } from "express-fileupload";
+import path from "path";
+import fs from "fs/promises";
+import prisma from "../lib/prisma";
+import { validateAudioFile } from "../middleware/validateAudioFile";
+import { uploadSchema } from "../config/upload.config";
 
 const router = Router();
 
@@ -14,16 +14,16 @@ const router = Router();
  * RN-001.03 - Upload deve ser vinculado a um ID (reunião/teste)
  * RN-001.04 - Status inicial = "pendente"
  */
-router.post('/upload', validateAudioFile, async (req: Request, res: Response) => {
+router.post("/upload", validateAudioFile, async (req: Request, res: Response) => {
   try {
     // Validar dados do body
     const validation = uploadSchema.safeParse(req.body);
-    
+
     if (!validation.success) {
       res.status(400).json({
         success: false,
-        error: 'Dados inválidos',
-        details: validation.error.errors
+        error: "Dados inválidos",
+        details: validation.error.errors,
       });
       return;
     }
@@ -32,34 +32,34 @@ router.post('/upload', validateAudioFile, async (req: Request, res: Response) =>
 
     // Verificar se o usuário existe
     const usuario = await prisma.usuario.findUnique({
-      where: { id: usuarioId }
+      where: { id: usuarioId },
     });
 
     if (!usuario) {
       res.status(404).json({
         success: false,
-        error: 'Usuário não encontrado'
+        error: "Usuário não encontrado",
       });
       return;
     }
 
     const file = req.files!.audio as UploadedFile;
-    
+
     // Gerar nome único para o arquivo
     const fileExtension = path.extname(file.name);
     const timestamp = Date.now();
     const nomeArmazenado = `${timestamp}-${Math.random().toString(36).substring(7)}${fileExtension}`;
-    
+
     // Criar diretório de uploads se não existir
-    const uploadDir = process.env.UPLOAD_DIR || './uploads';
+    const uploadDir = process.env.UPLOAD_DIR || "./uploads";
     await fs.mkdir(uploadDir, { recursive: true });
-    
+
     // Caminho completo do arquivo
     const caminhoArquivo = path.join(uploadDir, nomeArmazenado);
-    
+
     // Salvar arquivo no disco
     await file.mv(caminhoArquivo);
-    
+
     // RN-001.04 - Criar registro no banco com status PENDENTE
     const arquivoAudio = await prisma.arquivoAudio.create({
       data: {
@@ -67,31 +67,31 @@ router.post('/upload', validateAudioFile, async (req: Request, res: Response) =>
         nomeArmazenado,
         caminhoArquivo,
         tamanhoBytes: file.size,
-        formato: fileExtension.replace('.', ''),
-        statusProcessamento: 'PENDENTE',
+        formato: fileExtension.replace(".", ""),
+        statusProcessamento: "PENDENTE",
         idReuniaoOuTeste,
-        usuarioId
+        usuarioId,
       },
       include: {
         usuario: {
           select: {
             id: true,
             nome: true,
-            email: true
-          }
-        }
-      }
+            email: true,
+          },
+        },
+      },
     });
 
     // Iniciar processamento assíncrono da transcrição
-    processTranscription(arquivoAudio.id, caminhoArquivo).catch(error => {
-      console.error('Erro no processamento assíncrono:', error);
+    processTranscription(arquivoAudio.id, caminhoArquivo).catch((error) => {
+      console.error("Erro no processamento assíncrono:", error);
     });
 
     // CA-001.01 - Retornar sucesso com dados do registro criado
     res.status(201).json({
       success: true,
-      message: 'Arquivo enviado com sucesso. Transcrição será processada em background.',
+      message: "Arquivo enviado com sucesso. Transcrição será processada em background.",
       data: {
         id: arquivoAudio.id,
         nomeOriginal: arquivoAudio.nomeOriginal,
@@ -100,15 +100,14 @@ router.post('/upload', validateAudioFile, async (req: Request, res: Response) =>
         statusProcessamento: arquivoAudio.statusProcessamento,
         idReuniaoOuTeste: arquivoAudio.idReuniaoOuTeste,
         usuario: arquivoAudio.usuario,
-        createdAt: arquivoAudio.createdAt
-      }
+        createdAt: arquivoAudio.createdAt,
+      },
     });
-
   } catch (error) {
-    console.error('Erro ao processar upload:', error);
+    console.error("Erro ao processar upload:", error);
     res.status(500).json({
       success: false,
-      error: 'Erro ao processar upload do arquivo'
+      error: "Erro ao processar upload do arquivo",
     });
   }
 });
@@ -118,49 +117,49 @@ router.post('/upload', validateAudioFile, async (req: Request, res: Response) =>
  */
 async function processTranscription(audioId: string, filePath: string): Promise<void> {
   let processedFiles: string[] = [];
-  
+
   try {
     // Atualizar status para PROCESSANDO
     await prisma.arquivoAudio.update({
       where: { id: audioId },
-      data: { statusProcessamento: 'PROCESSANDO' }
+      data: { statusProcessamento: "PROCESSANDO" },
     });
 
     // Importar serviços
-    const { transcribeAudio, isGroqConfigured } = await import('../services/transcription.service');
-    const { processAudioFile, cleanupTempFiles } = await import('../services/audio-processing.service');
+    const { transcribeAudio, isGroqConfigured } = await import("../services/transcription.service");
+    const { processAudioFile, cleanupTempFiles } = await import("../services/audio-processing.service");
 
     // Verificar se o Groq está configurado
     if (!isGroqConfigured()) {
-      throw new Error('API Key do Groq não configurada');
+      throw new Error("API Key do Groq não configurada");
     }
 
     // Processar o áudio (comprimir/dividir se necessário)
     console.log(`🔄 Processando áudio ${audioId}...`);
     const processingResult = await processAudioFile(filePath);
-    
+
     console.log(`📊 Tamanho original: ${(processingResult.originalSize / 1024 / 1024).toFixed(2)}MB`);
     console.log(`📊 Tamanho processado: ${(processingResult.processedSize / 1024 / 1024).toFixed(2)}MB`);
-    console.log(`🗜️ Foi comprimido: ${processingResult.wasCompressed ? 'Sim' : 'Não'}`);
+    console.log(`🗜️ Foi comprimido: ${processingResult.wasCompressed ? "Sim" : "Não"}`);
 
     // Se foi dividido em chunks, processar cada um
     if (processingResult.chunks && processingResult.chunks.length > 1) {
       console.log(`✂️ Arquivo dividido em ${processingResult.chunks.length} partes`);
-      
-      let fullTranscription = '';
-      
+
+      let fullTranscription = "";
+
       for (let i = 0; i < processingResult.chunks.length; i++) {
         const chunkPath = processingResult.chunks[i];
         console.log(`📝 Transcrevendo parte ${i + 1}/${processingResult.chunks.length}...`);
-        
+
         // Adicionar delay entre chunks para evitar rate limiting (exceto no primeiro)
         if (i > 0) {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // 1 segundo entre chunks
+          await new Promise((resolve) => setTimeout(resolve, 1000)); // 1 segundo entre chunks
         }
-        
+
         const result = await transcribeAudio(chunkPath);
-        fullTranscription += result.text + '\n\n';
-        
+        fullTranscription += result.text + "\n\n";
+
         processedFiles.push(chunkPath);
       }
 
@@ -168,14 +167,13 @@ async function processTranscription(audioId: string, filePath: string): Promise<
       await prisma.arquivoAudio.update({
         where: { id: audioId },
         data: {
-          statusProcessamento: 'CONCLUIDO',
+          statusProcessamento: "CONCLUIDO",
           transcricao: fullTranscription.trim(),
-          processadoEm: new Date()
-        }
+          processadoEm: new Date(),
+        },
       });
 
       console.log(`✅ Transcrição concluída para arquivo ${audioId} (${processingResult.chunks.length} partes)`);
-      
     } else {
       // Transcrever arquivo único (original ou comprimido)
       const result = await transcribeAudio(processingResult.processedPath);
@@ -189,10 +187,10 @@ async function processTranscription(audioId: string, filePath: string): Promise<
       await prisma.arquivoAudio.update({
         where: { id: audioId },
         data: {
-          statusProcessamento: 'CONCLUIDO',
+          statusProcessamento: "CONCLUIDO",
           transcricao: result.text,
-          processadoEm: new Date()
-        }
+          processadoEm: new Date(),
+        },
       });
 
       console.log(`✅ Transcrição concluída para arquivo ${audioId}`);
@@ -203,29 +201,28 @@ async function processTranscription(audioId: string, filePath: string): Promise<
       await cleanupTempFiles(processedFiles);
       console.log(`🧹 Arquivos temporários limpos`);
     }
-
   } catch (error: any) {
     console.error(`❌ Erro ao transcrever arquivo ${audioId}:`, error);
 
     // Mensagem de erro mais amigável
-    let errorMessage = error.message || 'Erro desconhecido na transcrição';
-    
-    if (error.message?.includes('413') || error.message?.includes('too large')) {
-      errorMessage = 'Arquivo muito grande para transcrição (máximo: 25MB)';
+    let errorMessage = error.message || "Erro desconhecido na transcrição";
+
+    if (error.message?.includes("413") || error.message?.includes("too large")) {
+      errorMessage = "Arquivo muito grande para transcrição (máximo: 25MB)";
     }
 
     // Atualizar registro com erro
     await prisma.arquivoAudio.update({
       where: { id: audioId },
       data: {
-        statusProcessamento: 'ERRO',
-        erroProcessamento: errorMessage
-      }
+        statusProcessamento: "ERRO",
+        erroProcessamento: errorMessage,
+      },
     });
 
     // Limpar arquivos temporários mesmo em caso de erro
     if (processedFiles.length > 0) {
-      const { cleanupTempFiles } = await import('../services/audio-processing.service');
+      const { cleanupTempFiles } = await import("../services/audio-processing.service");
       await cleanupTempFiles(processedFiles);
     }
   }
@@ -235,7 +232,7 @@ async function processTranscription(audioId: string, filePath: string): Promise<
  * GET /api/audio/:id
  * Buscar detalhes de um arquivo de áudio
  */
-router.get('/:id', async (req: Request, res: Response) => {
+router.get("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -246,33 +243,32 @@ router.get('/:id', async (req: Request, res: Response) => {
           select: {
             id: true,
             nome: true,
-            email: true
-          }
+            email: true,
+          },
         },
         assinaturas: {
-          orderBy: { assinadoEm: 'asc' }
-        }
-      }
+          orderBy: { assinadoEm: "asc" },
+        },
+      },
     });
 
     if (!arquivo) {
       res.status(404).json({
         success: false,
-        error: 'Arquivo não encontrado'
+        error: "Arquivo não encontrado",
       });
       return;
     }
 
     res.json({
       success: true,
-      data: arquivo
+      data: arquivo,
     });
-
   } catch (error) {
-    console.error('Erro ao buscar arquivo:', error);
+    console.error("Erro ao buscar arquivo:", error);
     res.status(500).json({
       success: false,
-      error: 'Erro ao buscar arquivo'
+      error: "Erro ao buscar arquivo",
     });
   }
 });
@@ -281,19 +277,19 @@ router.get('/:id', async (req: Request, res: Response) => {
  * DELETE /api/audio/:id
  * Deleta o arquivo de áudio, transcrição e ata
  */
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
     // Buscar arquivo para pegar o caminho
     const arquivo = await prisma.arquivoAudio.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!arquivo) {
       res.status(404).json({
         success: false,
-        error: 'Arquivo não encontrado'
+        error: "Arquivo não encontrado",
       });
       return;
     }
@@ -303,25 +299,24 @@ router.delete('/:id', async (req: Request, res: Response) => {
       await fs.unlink(arquivo.caminhoArquivo);
       console.log(`🗑️ Arquivo deletado: ${arquivo.caminhoArquivo}`);
     } catch (error) {
-      console.error('Erro ao deletar arquivo físico:', error);
+      console.error("Erro ao deletar arquivo físico:", error);
       // Continua mesmo se o arquivo não existir
     }
 
     // Deletar registro do banco
     await prisma.arquivoAudio.delete({
-      where: { id }
+      where: { id },
     });
 
     res.json({
       success: true,
-      message: 'Arquivo, transcrição e ata deletados com sucesso'
+      message: "Arquivo, transcrição e ata deletados com sucesso",
     });
-
   } catch (error) {
-    console.error('Erro ao deletar arquivo:', error);
+    console.error("Erro ao deletar arquivo:", error);
     res.status(500).json({
       success: false,
-      error: 'Erro ao deletar arquivo'
+      error: "Erro ao deletar arquivo",
     });
   }
 });
@@ -330,7 +325,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
  * POST /api/audio/:id/assinar
  * Criar assinatura para uma ata
  */
-router.post('/:id/assinar', async (req: Request, res: Response) => {
+router.post("/:id/assinar", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { nomeAssinante, cpfAssinante, emailAssinante, cargoAssinante } = req.body;
@@ -339,7 +334,7 @@ router.post('/:id/assinar', async (req: Request, res: Response) => {
     if (!nomeAssinante) {
       res.status(400).json({
         success: false,
-        error: 'Nome do assinante é obrigatório'
+        error: "Nome do assinante é obrigatório",
       });
       return;
     }
@@ -347,13 +342,13 @@ router.post('/:id/assinar', async (req: Request, res: Response) => {
     // Buscar arquivo e verificar se tem ata
     const arquivo = await prisma.arquivoAudio.findUnique({
       where: { id },
-      include: { assinaturas: true }
+      include: { assinaturas: true },
     });
 
     if (!arquivo) {
       res.status(404).json({
         success: false,
-        error: 'Arquivo não encontrado'
+        error: "Arquivo não encontrado",
       });
       return;
     }
@@ -361,21 +356,18 @@ router.post('/:id/assinar', async (req: Request, res: Response) => {
     if (!arquivo.ataGerada || !arquivo.textoAta) {
       res.status(400).json({
         success: false,
-        error: 'Esta transcrição ainda não possui uma ata gerada'
+        error: "Esta transcrição ainda não possui uma ata gerada",
       });
       return;
     }
 
     // Criar hash do documento (simplificado para MVP)
-    const crypto = require('crypto');
-    const hashDocumento = crypto
-      .createHash('sha256')
-      .update(arquivo.textoAta)
-      .digest('hex');
+    const crypto = require("crypto");
+    const hashDocumento = crypto.createHash("sha256").update(arquivo.textoAta).digest("hex");
 
     // Capturar dados da requisição
     const ipAssinante = req.ip || req.socket.remoteAddress;
-    const userAgentAssinante = req.headers['user-agent'];
+    const userAgentAssinante = req.headers["user-agent"];
 
     // Criar assinatura
     const assinatura = await prisma.assinatura.create({
@@ -385,26 +377,25 @@ router.post('/:id/assinar', async (req: Request, res: Response) => {
         cpfAssinante: cpfAssinante || null,
         emailAssinante: emailAssinante || null,
         cargoAssinante: cargoAssinante || null,
-        tipoAssinatura: 'SIMPLES',
+        tipoAssinatura: "SIMPLES",
         hashDocumento,
         ipAssinante,
-        userAgentAssinante
-      }
+        userAgentAssinante,
+      },
     });
 
-    console.log(`✍️ Ata assinada por ${nomeAssinante} (${cargoAssinante || 'sem cargo'})`);
+    console.log(`✍️ Ata assinada por ${nomeAssinante} (${cargoAssinante || "sem cargo"})`);
 
     res.json({
       success: true,
-      message: 'Assinatura registrada com sucesso',
-      data: assinatura
+      message: "Assinatura registrada com sucesso",
+      data: assinatura,
     });
-
   } catch (error) {
-    console.error('Erro ao criar assinatura:', error);
+    console.error("Erro ao criar assinatura:", error);
     res.status(500).json({
       success: false,
-      error: 'Erro ao registrar assinatura'
+      error: "Erro ao registrar assinatura",
     });
   }
 });
@@ -413,25 +404,24 @@ router.post('/:id/assinar', async (req: Request, res: Response) => {
  * GET /api/audio/:id/assinaturas
  * Listar assinaturas de uma ata
  */
-router.get('/:id/assinaturas', async (req: Request, res: Response) => {
+router.get("/:id/assinaturas", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
     const assinaturas = await prisma.assinatura.findMany({
       where: { arquivoAudioId: id },
-      orderBy: { assinadoEm: 'asc' }
+      orderBy: { assinadoEm: "asc" },
     });
 
     res.json({
       success: true,
-      data: assinaturas
+      data: assinaturas,
     });
-
   } catch (error) {
-    console.error('Erro ao buscar assinaturas:', error);
+    console.error("Erro ao buscar assinaturas:", error);
     res.status(500).json({
       success: false,
-      error: 'Erro ao buscar assinaturas'
+      error: "Erro ao buscar assinaturas",
     });
   }
 });
@@ -440,16 +430,16 @@ router.get('/:id/assinaturas', async (req: Request, res: Response) => {
  * GET /api/audio
  * Listar todos os arquivos de áudio
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get("/", async (req: Request, res: Response) => {
   try {
     const { usuarioId, status } = req.query;
 
     const where: any = {};
-    
+
     if (usuarioId) {
       where.usuarioId = usuarioId as string;
     }
-    
+
     if (status) {
       where.statusProcessamento = status as string;
     }
@@ -461,26 +451,25 @@ router.get('/', async (req: Request, res: Response) => {
           select: {
             id: true,
             nome: true,
-            email: true
-          }
-        }
+            email: true,
+          },
+        },
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: "desc",
+      },
     });
 
     res.json({
       success: true,
       count: arquivos.length,
-      data: arquivos
+      data: arquivos,
     });
-
   } catch (error) {
-    console.error('Erro ao listar arquivos:', error);
+    console.error("Erro ao listar arquivos:", error);
     res.status(500).json({
       success: false,
-      error: 'Erro ao listar arquivos'
+      error: "Erro ao listar arquivos",
     });
   }
 });
@@ -489,60 +478,59 @@ router.get('/', async (req: Request, res: Response) => {
  * POST /api/audio/:id/gerar-ata
  * Gera uma ata estruturada a partir da transcrição
  */
-router.post('/:id/gerar-ata', async (req: Request, res: Response) => {
+router.post("/:id/gerar-ata", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
     // Buscar o arquivo
     const arquivo = await prisma.arquivoAudio.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!arquivo) {
       res.status(404).json({
         success: false,
-        error: 'Arquivo não encontrado'
+        error: "Arquivo não encontrado",
       });
       return;
     }
 
     // Verificar se tem transcrição
-    if (!arquivo.transcricao || arquivo.statusProcessamento !== 'CONCLUIDO') {
+    if (!arquivo.transcricao || arquivo.statusProcessamento !== "CONCLUIDO") {
       res.status(400).json({
         success: false,
-        error: 'Transcrição não disponível. O arquivo precisa estar com status CONCLUIDO.'
+        error: "Transcrição não disponível. O arquivo precisa estar com status CONCLUIDO.",
       });
       return;
     }
 
     // Verificar se já está gerando
-    if (arquivo.statusAta === 'GERANDO') {
+    if (arquivo.statusAta === "GERANDO") {
       res.status(409).json({
         success: false,
-        error: 'Ata já está sendo gerada. Aguarde a conclusão.'
+        error: "Ata já está sendo gerada. Aguarde a conclusão.",
       });
       return;
     }
 
     // Iniciar processo de geração (assíncrono)
-    generateAtaAsync(id, arquivo.transcricao).catch(error => {
-      console.error('Erro no processamento assíncrono da ata:', error);
+    generateAtaAsync(id, arquivo.transcricao).catch((error) => {
+      console.error("Erro no processamento assíncrono da ata:", error);
     });
 
     res.status(202).json({
       success: true,
-      message: 'Geração da ata iniciada. Acompanhe o status.',
+      message: "Geração da ata iniciada. Acompanhe o status.",
       data: {
         id: arquivo.id,
-        statusAta: 'GERANDO'
-      }
+        statusAta: "GERANDO",
+      },
     });
-
   } catch (error) {
-    console.error('Erro ao iniciar geração da ata:', error);
+    console.error("Erro ao iniciar geração da ata:", error);
     res.status(500).json({
       success: false,
-      error: 'Erro ao iniciar geração da ata'
+      error: "Erro ao iniciar geração da ata",
     });
   }
 });
@@ -555,17 +543,17 @@ async function generateAtaAsync(audioId: string, transcricao: string): Promise<v
     // Atualizar status para GERANDO
     await prisma.arquivoAudio.update({
       where: { id: audioId },
-      data: { statusAta: 'GERANDO' }
+      data: { statusAta: "GERANDO" },
     });
 
     console.log(`🤖 Gerando ata para arquivo ${audioId}...`);
 
     // Importar serviço de geração
-    const { generateAta, isGroqConfigured } = await import('../services/ata-generation.service');
+    const { generateAta, isGroqConfigured } = await import("../services/ata-generation.service");
 
     // Verificar se o Groq está configurado
     if (!isGroqConfigured()) {
-      throw new Error('API Key do Groq não configurada');
+      throw new Error("API Key do Groq não configurada");
     }
 
     // Gerar ata usando Groq
@@ -577,26 +565,25 @@ async function generateAtaAsync(audioId: string, transcricao: string): Promise<v
       data: {
         ataGerada: true,
         textoAta: result.ata,
-        statusAta: 'CONCLUIDA',
-        ataGeradaEm: new Date()
-      }
+        statusAta: "CONCLUIDA",
+        ataGeradaEm: new Date(),
+      },
     });
 
     console.log(`✅ Ata gerada com sucesso para arquivo ${audioId}`);
-
   } catch (error: any) {
     console.error(`❌ Erro ao gerar ata para arquivo ${audioId}:`, error);
 
     // Mensagem de erro amigável
-    let errorMessage = error.message || 'Erro desconhecido na geração da ata';
+    let errorMessage = error.message || "Erro desconhecido na geração da ata";
 
     // Atualizar registro com erro
     await prisma.arquivoAudio.update({
       where: { id: audioId },
       data: {
-        statusAta: 'ERRO',
-        erroAta: errorMessage
-      }
+        statusAta: "ERRO",
+        erroAta: errorMessage,
+      },
     });
   }
 }

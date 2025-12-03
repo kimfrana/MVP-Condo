@@ -4,7 +4,7 @@
   "description": "MVP - Sistema de Transcrição de Atas para Condomínios",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "concurrently \"tsx watch src/server.ts\" \"npx prisma studio\"",
     "build": "tsc",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
